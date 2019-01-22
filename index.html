@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WS Example</title>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            font-size: 40px;
+            margin: 0 0 50px;
+            padding: 20px;
+            text-align: center;
+            background: #F2DF56;
+        }
+
+        button {
+            padding: 12px;
+            background: #333;
+            color: #fff;
+            font-size: 20px;
+            border: 0;
+            text-align: center;
+            min-width: 100px;
+        }
+        button.on {
+            background: green;
+        }
+
+        .reset-button {
+            background: #c34949;
+            margin: 50px auto 0;
+            font-size: 15px;
+            padding: 8px;
+            display: block;
+        }
+
+        .button-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            border-top: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
+            background: #eee;
+            padding: 10px 20px;
+        }
+        .button-label {
+            font-size: 18px;
+            font-weight: 500;
+            flex-grow: 1;
+        }
+
+        .sensitivity-row {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 45px;
+        }
+        .sensitivity-value {
+            display: block;
+            font-size: 30px;
+            font-weight: 600;
+            margin-bottom: 25px;
+        }
+        .sensitivity-control {
+            display: block;
+            width: 80%;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Hit test controls</h1>
+
+    <div class="sensitivity-row">
+        <!-- Create a element which will hold the value of the current sensitivity -->
+        <span class="sensitivity-value" id="sensitivityValue"></span>
+
+        <!-- Create a slider that moves from 0 to 100 that will update the sensitivity -->
+        <input class="sensitivity-control" type="range" min="0" max="100" id="slider" />
+    </div>
+
+    <div class="button-row">
+        <!-- Createa a new button and give it some text -->
+        <div class="button-label">Button 1</div>
+        <button type="button" id="button1">
+            OFF
+        </button>
+    </div>
+
+    <div class="button-row">
+        <!-- Createa a new button and give it some text -->
+        <div class="button-label">Button 2</div>
+        <button type="button" id="button2">
+            OFF
+        </button>
+    </div>
+
+    <!-- Set up a reset button. We add `class="reset-button2` so we can style it differently -->
+    <button type="button" id="buttonReset" class="reset-button">
+        Reset
+    </button>
+</body>
+
+<script>
+    // Create variables for each of the elements on the page we
+    // want to interact with and update.
+    // We get the elements by their "id" attribute. Example: <button id="button1">...
+    const button1 = document.getElementById("button1");
+    const button2 = document.getElementById("button2");
+    const resetButton = document.getElementById("buttonReset");
+    const valueSlider = document.getElementById("slider");
+    const sensitivityValue = document.getElementById("sensitivityValue");
+
+    // Update a button. `on` is `true` if it is turned "ON", else it is false
+    function updateButton(button, on) {
+        if (on) {
+            // If the button is "ON", we set the text to be "ON"
+            button.innerText = "ON";
+            // We add "on" to the classList, this allows styling it differently
+            // with `button.on`
+            button.classList.add("on");
+        } else {
+            // If the button is "OFF", we set the text to be "OFF"
+            button.innerText = "OFF";
+            // We remove "on" from the classList, ensuring that the button has
+            // default styling
+            button.classList.remove("on");
+        }
+    }
+
+    // Render the app with the given state
+    function renderApp(state) {
+        // Update button 1, set second argument to `true` if it is "on"
+        updateButton(button1, state.button1 === "on");
+
+        // Update button 2, set second argument to `true` if it is "on"
+        updateButton(button2, state.button2 === "on");
+
+        // Update the sensitivity text
+        sensitivityValue.innerText = state.sensitivity;
+
+        // Update the slider to the given sensitivity
+        valueSlider.value = state.sensitivity;
+    }
+
+    // Start a new WebSocket connection on the current host
+    const ws = new WebSocket(`ws://${location.host}`);
+
+    // This is called whenever the server sends us data
+    ws.onmessage = event => {
+        // Parse the data as JSON
+        const data = JSON.parse(event.data);
+
+        // If the server sent us a new "state", re-render the app
+        if (data.type === "state") {
+            renderApp(data.state);
+        }
+    }
+
+    // When button 1 is clicked
+    button1.onclick = () => {
+        // Send the new button1 state to the server.
+        // `value` will be "on" or "off"
+        ws.send(JSON.stringify({
+            type: "button1",
+            value: button1.classList.contains("on") ? "off" : "on"
+        }));
+    }
+
+    // When button 2 is clicked
+    button2.onclick = () => {
+        // Send the new button2 state to the server.
+        // `value` will be "on" or "off"
+        ws.send(JSON.stringify({
+            type: "button2",
+            value: button2.classList.contains("on") ? "off" : "on"
+        }));
+    }
+
+    // When the sensitivity slider is changed
+    valueSlider.onchange = event => {
+        // Send the new sensitivity to the server
+        ws.send(JSON.stringify({
+            type: "sensitivity",
+            // This is the new value of the sensitivity
+            value: event.target.value
+        }));
+    }
+
+    // When the reset button is clicked
+    resetButton.onclick = () => {
+        // Send a "reset" to the server
+        ws.send(JSON.stringify({
+            type: "reset"
+        }));
+    }
+</script>
+
+</html>
